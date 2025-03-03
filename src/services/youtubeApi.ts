@@ -14,42 +14,31 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
 const loadGapiClient = async () => {
-  // Ждем загрузки gapi
-  if (!window.gapi) {
-    await new Promise<void>((resolve) => {
-      const checkGapi = () => {
-        if (window.gapi) {
-          resolve();
-        } else {
-          setTimeout(checkGapi, 100);
-        }
-      };
-      checkGapi();
-    });
-  }
+  // Ждем загрузки GAPI
+  await new Promise<void>((resolve) => {
+    window.gapiLoadedCallback = resolve;
+    if (window.gapi) resolve();
+  });
 
-  // Ждем загрузки google.accounts
-  if (!window.google?.accounts) {
-    await new Promise<void>((resolve) => {
-      const checkGoogle = () => {
-        if (window.google?.accounts) {
-          resolve();
-        } else {
-          setTimeout(checkGoogle, 100);
-        }
-      };
-      checkGoogle();
-    });
-  }
+  // Ждем загрузки GSI
+  await new Promise<void>((resolve) => {
+    window.gisLoadedCallback = resolve;
+    if (window.google?.accounts) resolve();
+  });
 
-  // Инициализируем gapi.client
+  // Инициализируем GAPI
   await new Promise<void>((resolve) => {
     window.gapi.load('client', async () => {
-      await window.gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
-      });
-      resolve();
+      try {
+        await window.gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+        });
+        resolve();
+      } catch (error) {
+        console.error('Error initializing GAPI client:', error);
+        resolve();
+      }
     });
   });
 };

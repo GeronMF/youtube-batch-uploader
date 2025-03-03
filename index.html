@@ -5,9 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Batch Uploader</title>
-    <!-- Добавляем оба скрипта в правильном порядке -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Загружаем Google API с callback'ом -->
+    <script>
+      function gapiLoaded() {
+        window.gapiLoadedCallback && window.gapiLoadedCallback();
+      }
+      function gisLoaded() {
+        window.gisLoadedCallback && window.gisLoadedCallback();
+      }
+    </script>
+    <script src="https://apis.google.com/js/api.js?onload=gapiLoaded"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
   </head>
   <body>
     <div id="root"></div>
