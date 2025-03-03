@@ -25,12 +25,15 @@ jobs:
         run: npm run build
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_YOUTUBE_API_KEY: ${{ secrets.VITE_YOUTUBE_API_KEY }}
           
-      - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Deploy to Server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: /path/to/your/site/directory/ 
+          host: decloud2376.zahid.host
+          port: 32762
+          username: youtubebatchuploaderfun
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "dist/*"
+          target: "/home/youtubebatchuploaderfun/www"
+          strip_components: 1 
