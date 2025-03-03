@@ -99,17 +99,38 @@ export const initGoogleApi = async (): Promise<void> => {
 
 // Sign in the user
 export const signIn = async (): Promise<any> => {
+  console.log('Starting sign in process...');
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES.join(' '),
-    callback: () => {}, // Будет переопределен при вызове
+    callback: (response: any) => {
+      console.log('Sign in callback received:', response ? 'with token' : 'no token');
+      if (response?.access_token) {
+        console.log('Setting access token in callback...');
+        gapi.client.setToken(response);
+        console.log('Access token set in callback');
+      }
+    }
   });
 
   return new Promise((resolve, reject) => {
     try {
+      console.log('Requesting access token...');
       tokenClient.requestAccessToken({ prompt: 'consent' });
-      resolve(true);
+      
+      // Даем время на установку токена
+      setTimeout(() => {
+        console.log('Checking auth state after delay...');
+        if (isSignedIn()) {
+          console.log('Successfully signed in');
+          resolve(true);
+        } else {
+          console.log('Not signed in after token request');
+          reject(new Error('Failed to sign in'));
+        }
+      }, 1000);
     } catch (err) {
+      console.error('Error in sign in process:', err);
       reject(err);
     }
   });
