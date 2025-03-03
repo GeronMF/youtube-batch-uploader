@@ -1,0 +1,5 @@
+# Правило для обработки маршрута авторизации
+/auth/callback /auth-callback.html 200
+
+# Правило для SPA (Single Page Application)
+/* /index.html 200

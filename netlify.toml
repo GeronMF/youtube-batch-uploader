@@ -1,0 +1,15 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Правило для обработки маршрута авторизации
+[[redirects]]
+  from = "/auth/callback"
+  to = "/auth-callback.html"
+  status = 200
+
+# Правило для SPA (Single Page Application)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
