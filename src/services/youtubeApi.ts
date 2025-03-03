@@ -77,7 +77,7 @@ export const initGoogleApi = async (): Promise<void> => {
           console.log('Token client callback received:', response ? 'with token' : 'no token');
           if (response?.access_token) {
             console.log('Setting access token...');
-            gapi.client.setToken(response.access_token);
+            gapi.client.setToken(response);
             console.log('Access token set successfully');
             resolve();
           } else {
@@ -147,9 +147,13 @@ export const signOut = async (): Promise<void> => {
 // Check if user is signed in
 export const isSignedIn = (): boolean => {
   try {
-    // @ts-ignore
     const token = gapi.client.getToken();
-    console.log('Current token:', token);
+    console.log('Current token state:', {
+      hasToken: !!token,
+      hasAccessToken: !!token?.access_token,
+      tokenType: token?.token_type,
+      expiresIn: token?.expires_in
+    });
     return !!token && !!token.access_token;
   } catch (error) {
     console.error('Error checking if user is signed in:', error);
