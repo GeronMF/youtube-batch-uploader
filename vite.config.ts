@@ -32,9 +32,7 @@ export default defineConfig({
   },
   define: {
     'process.env.VITE_ALLOWED_ORIGINS': JSON.stringify([
-      'https://youtubebatchuploader.fun',
-      'http://localhost:5173',
-      'https://localhost:5173'
+      'https://youtubebatchuploader.fun'
     ])
   }
 });
