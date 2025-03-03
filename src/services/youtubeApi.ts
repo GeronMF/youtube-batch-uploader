@@ -51,25 +51,34 @@ export const initGoogleApi = async (): Promise<void> => {
 export const signIn = async (): Promise<any> => {
   console.log('Starting sign in process...');
   
-  // Используем только Google Identity Services для авторизации
   return new Promise((resolve, reject) => {
     try {
-      const tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES.join(' '),
-        callback: (tokenResponse: any) => {
-          if (tokenResponse?.access_token) {
-            gapi.client.setToken(tokenResponse);
-            resolve(tokenResponse);
-          } else {
-            reject(new Error('No access token received'));
+      // Создаем элемент для авторизации
+      const googleScript = document.createElement('script');
+      googleScript.src = 'https://accounts.google.com/gsi/client';
+      googleScript.async = true;
+      googleScript.defer = true;
+      googleScript.onload = () => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES.join(' '),
+          callback: (tokenResponse: any) => {
+            if (tokenResponse?.access_token) {
+              gapi.client.setToken(tokenResponse);
+              resolve(tokenResponse);
+            } else {
+              reject(new Error('No access token received'));
+            }
           }
-        }
-      });
+        });
 
-      tokenClient.requestAccessToken({
-        prompt: ''  // Не показывать диалог выбора аккаунта
-      });
+        tokenClient.requestAccessToken({
+          prompt: 'consent'
+        });
+      };
+      
+      // Добавляем скрипт на страницу
+      document.head.appendChild(googleScript);
     } catch (err) {
       reject(err);
     }
