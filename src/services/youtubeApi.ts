@@ -41,14 +41,15 @@ const loadGapiClient = async () => {
 export const initGoogleApi = async (): Promise<void> => {
   console.log('Starting initGoogleApi...');
   
-  // Загружаем только GAPI
   return new Promise<void>((resolve) => {
-    gapi.load('client', async () => {
+    gapi.load('client:auth2', async () => {
       try {
         console.log('GAPI loaded, initializing client...');
         await gapi.client.init({
           apiKey: API_KEY,
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+          clientId: CLIENT_ID,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+          scope: SCOPES.join(' ')
         });
         console.log('GAPI client initialized');
         resolve();
@@ -66,33 +67,38 @@ export const signIn = async (): Promise<any> => {
   
   return new Promise((resolve, reject) => {
     try {
-      // Создаем элемент для авторизации
-      const googleScript = document.createElement('script');
-      googleScript.src = 'https://accounts.google.com/gsi/client';
-      googleScript.async = true;
-      googleScript.defer = true;
-      googleScript.onload = () => {
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES.join(' '),
-          callback: (tokenResponse: any) => {
-            if (tokenResponse?.access_token) {
-              gapi.client.setToken(tokenResponse);
-              resolve(tokenResponse);
-            } else {
-              reject(new Error('No access token received'));
-            }
-          }
-        });
-
-        tokenClient.requestAccessToken({
-          prompt: 'consent'
-        });
-      };
+      if (!gapi.auth2) {
+        console.error('gapi.auth2 is not initialized');
+        reject(new Error('gapi.auth2 is not initialized'));
+        return;
+      }
       
-      // Добавляем скрипт на страницу
-      document.head.appendChild(googleScript);
+      const authInstance = gapi.auth2.getAuthInstance();
+      
+      if (!authInstance) {
+        console.error('Auth instance is not available');
+        reject(new Error('Auth instance is not available'));
+        return;
+      }
+      
+      authInstance.signIn({
+        prompt: 'consent',
+        ux_mode: 'redirect'  // Используем redirect вместо popup
+      }).then(
+        (googleUser) => {
+          const authResponse = googleUser.getAuthResponse();
+          gapi.client.setToken({
+            access_token: authResponse.access_token
+          });
+          resolve(googleUser);
+        },
+        (error) => {
+          console.error('Error during sign in:', error);
+          reject(error);
+        }
+      );
     } catch (err) {
+      console.error('Exception during sign in:', err);
       reject(err);
     }
   });
