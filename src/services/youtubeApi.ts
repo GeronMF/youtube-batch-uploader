@@ -40,11 +40,24 @@ const loadGapiClient = async () => {
 // Initialize the Google API client
 export const initGoogleApi = async (): Promise<void> => {
   console.log('Starting initGoogleApi...');
-  await loadGapiClient();
-  console.log('loadGapiClient completed successfully');
   
-  // Не запрашиваем токен при инициализации
-  return Promise.resolve();
+  // Загружаем только GAPI
+  return new Promise<void>((resolve) => {
+    gapi.load('client', async () => {
+      try {
+        console.log('GAPI loaded, initializing client...');
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+        });
+        console.log('GAPI client initialized');
+        resolve();
+      } catch (error) {
+        console.error('Error initializing GAPI client:', error);
+        resolve(); // Продолжаем даже при ошибке
+      }
+    });
+  });
 };
 
 // Sign in the user
