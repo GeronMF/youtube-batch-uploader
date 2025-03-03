@@ -10,6 +10,9 @@ const SCOPES = [
 // Client ID from Google Developer Console
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+// API key from Google Developer Console
+const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
+
 // Initialize the Google API client
 export const initGoogleApi = (): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -46,7 +49,7 @@ const initClient = (resolve: (value: void) => void, reject: (reason?: any) => vo
   console.log('Initializing GAPI client with CLIENT_ID:', CLIENT_ID);
   
   window.gapi.client.init({
-    apiKey: null,
+    apiKey: API_KEY,
     clientId: CLIENT_ID,
     scope: SCOPES.join(' '),
     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
