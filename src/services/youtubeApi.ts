@@ -63,22 +63,32 @@ const loadGapiClient = async () => {
 
 // Initialize the Google API client
 export const initGoogleApi = async (): Promise<void> => {
+  console.log('Starting initGoogleApi...');
   await loadGapiClient();
+  console.log('loadGapiClient completed successfully');
   
   return new Promise((resolve, reject) => {
     try {
+      console.log('Initializing token client...');
       // @ts-ignore
       google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES.join(' '),
         callback: (response: any) => {
-          if (response.access_token) {
+          console.log('Token client callback received:', response ? 'with token' : 'no token');
+          if (response?.access_token) {
+            console.log('Setting access token...');
             // @ts-ignore
             gapi.client.setToken(response.access_token);
+            console.log('Access token set successfully');
             resolve();
+          } else {
+            console.error('No access token in response');
+            reject(new Error('No access token received'));
           }
         },
       });
+      console.log('Token client initialized successfully');
     } catch (error) {
       console.error('Error in initGoogleApi:', error);
       reject(error);
