@@ -14,20 +14,43 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
 const loadGapiClient = async () => {
+  // Ждем загрузки gapi
   if (!window.gapi) {
-    const gapi = await import('gapi-script');
-    window.gapi = gapi;
-  }
-  
-  if (!window.gapi.client) {
-    await new Promise((resolve) => {
-      window.gapi.load('client', resolve);
+    await new Promise<void>((resolve) => {
+      const checkGapi = () => {
+        if (window.gapi) {
+          resolve();
+        } else {
+          setTimeout(checkGapi, 100);
+        }
+      };
+      checkGapi();
     });
   }
-  
-  await window.gapi.client.init({
-    apiKey: API_KEY,
-    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+
+  // Ждем загрузки google.accounts
+  if (!window.google?.accounts) {
+    await new Promise<void>((resolve) => {
+      const checkGoogle = () => {
+        if (window.google?.accounts) {
+          resolve();
+        } else {
+          setTimeout(checkGoogle, 100);
+        }
+      };
+      checkGoogle();
+    });
+  }
+
+  // Инициализируем gapi.client
+  await new Promise<void>((resolve) => {
+    window.gapi.load('client', async () => {
+      await window.gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+      });
+      resolve();
+    });
   });
 };
 

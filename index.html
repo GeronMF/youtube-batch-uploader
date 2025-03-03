@@ -5,8 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Batch Uploader</title>
-    <!-- Заменяем старый скрипт на новый -->
-    <script src="https://accounts.google.com/gsi/client"></script>
+    <!-- Добавляем оба скрипта в правильном порядке -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>
