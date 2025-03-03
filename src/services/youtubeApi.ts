@@ -235,4 +235,3 @@ export const addComment = async (videoId: string, commentText: string): Promise<
     }
   });
 };
-};
