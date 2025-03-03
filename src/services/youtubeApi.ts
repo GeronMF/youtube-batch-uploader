@@ -18,19 +18,14 @@ const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
 const loadGapiClient = async () => {
   console.log('Starting loadGapiClient...');
   
-  // Загружаем базовый GAPI
+  // Загружаем GAPI
   await new Promise<void>((resolve) => {
-    console.log('Loading GAPI...');
-    gapi.load('client:auth2', async () => {
+    gapi.load('client', async () => {
       try {
         console.log('GAPI loaded, initializing client...');
         await gapi.client.init({
           apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          scope: SCOPES.join(' '),
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
-          hosted_domain: window.location.origin,
-          ux_mode: 'popup'
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
         });
         console.log('GAPI client initialized');
         resolve();
@@ -68,35 +63,26 @@ export const initGoogleApi = async (): Promise<void> => {
 // Sign in the user
 export const signIn = async (): Promise<any> => {
   console.log('Starting sign in process...');
-  let tokenClient: any;
   
   return new Promise((resolve, reject) => {
     try {
       console.log('Initializing token client...');
-      tokenClient = google.accounts.oauth2.initTokenClient({
+      const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES.join(' '),
         callback: (tokenResponse: any) => {
-          console.log('Sign in callback received:', tokenResponse ? 'with token' : 'no token');
           if (tokenResponse?.access_token) {
-            console.log('Setting access token in callback...');
+            console.log('Setting access token...');
             gapi.client.setToken(tokenResponse);
-            console.log('Access token set in callback');
             resolve(tokenResponse);
           } else {
-            console.error('No access token in response');
             reject(new Error('No access token received'));
           }
         }
       });
 
-      console.log('Requesting access token...');
-      tokenClient.requestAccessToken({
-        prompt: 'consent',
-        hint: 'Выберите аккаунт YouTube для загрузки видео'
-      });
+      tokenClient.requestAccessToken();
     } catch (err) {
-      console.error('Error in sign in process:', err);
       reject(err);
     }
   });
