@@ -18,8 +18,8 @@ const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
 const loadGapiClient = async () => {
   console.log('Starting loadGapiClient...');
   
-  // Загружаем GAPI
-  await new Promise<void>((resolve) => {
+  // Загружаем только GAPI
+  return new Promise<void>((resolve) => {
     gapi.load('client', async () => {
       try {
         console.log('GAPI loaded, initializing client...');
@@ -34,19 +34,6 @@ const loadGapiClient = async () => {
         resolve(); // Продолжаем даже при ошибке
       }
     });
-  });
-
-  // Ждем загрузку Google Identity Services
-  await new Promise<void>((resolve) => {
-    const checkGoogleIdentity = () => {
-      if (window.google?.accounts?.oauth2) {
-        console.log('Google Identity Services loaded');
-        resolve();
-      } else {
-        setTimeout(checkGoogleIdentity, 100);
-      }
-    };
-    checkGoogleIdentity();
   });
 };
 
@@ -64,15 +51,14 @@ export const initGoogleApi = async (): Promise<void> => {
 export const signIn = async (): Promise<any> => {
   console.log('Starting sign in process...');
   
+  // Используем только Google Identity Services для авторизации
   return new Promise((resolve, reject) => {
     try {
-      console.log('Initializing token client...');
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES.join(' '),
         callback: (tokenResponse: any) => {
           if (tokenResponse?.access_token) {
-            console.log('Setting access token...');
             gapi.client.setToken(tokenResponse);
             resolve(tokenResponse);
           } else {
@@ -81,7 +67,9 @@ export const signIn = async (): Promise<any> => {
         }
       });
 
-      tokenClient.requestAccessToken();
+      tokenClient.requestAccessToken({
+        prompt: ''  // Не показывать диалог выбора аккаунта
+      });
     } catch (err) {
       reject(err);
     }
