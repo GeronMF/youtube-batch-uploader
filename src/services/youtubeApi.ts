@@ -74,20 +74,21 @@ export const initGoogleApi = async (): Promise<void> => {
 // Sign in the user
 export const signIn = async (): Promise<any> => {
   console.log('Starting sign in process...');
+  let tokenClient: any;
   
   return new Promise((resolve, reject) => {
     try {
       console.log('Initializing token client...');
-      const tokenClient = google.accounts.oauth2.initTokenClient({
+      tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES.join(' '),
-        callback: (response: any) => {
-          console.log('Sign in callback received:', response ? 'with token' : 'no token');
-          if (response?.access_token) {
+        callback: (tokenResponse: any) => {
+          console.log('Sign in callback received:', tokenResponse ? 'with token' : 'no token');
+          if (tokenResponse?.access_token) {
             console.log('Setting access token in callback...');
-            gapi.client.setToken(response);
+            gapi.client.setToken(tokenResponse);
             console.log('Access token set in callback');
-            resolve(true);
+            resolve(tokenResponse);
           } else {
             console.error('No access token in response');
             reject(new Error('No access token received'));
@@ -96,7 +97,10 @@ export const signIn = async (): Promise<any> => {
       });
 
       console.log('Requesting access token...');
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({
+        prompt: 'consent',
+        hint: 'Выберите аккаунт YouTube для загрузки видео'
+      });
     } catch (err) {
       console.error('Error in sign in process:', err);
       reject(err);
@@ -106,10 +110,15 @@ export const signIn = async (): Promise<any> => {
 
 // Sign out the user
 export const signOut = async (): Promise<void> => {
-  // @ts-ignore
-  google.accounts.oauth2.revoke(gapi.client.getToken().access_token);
-  // @ts-ignore
-  gapi.client.setToken(null);
+  const token = gapi.client.getToken();
+  if (token) {
+    try {
+      await google.accounts.oauth2.revoke(token.access_token);
+      gapi.client.setToken(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  }
 };
 
 // Check if user is signed in
