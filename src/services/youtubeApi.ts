@@ -13,30 +13,41 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 // API key from Google Developer Console
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
+const loadGapiClient = async () => {
+  if (!window.gapi) {
+    const gapi = await import('gapi-script');
+    window.gapi = gapi;
+  }
+  
+  if (!window.gapi.client) {
+    await new Promise((resolve) => {
+      window.gapi.load('client', resolve);
+    });
+  }
+  
+  await window.gapi.client.init({
+    apiKey: API_KEY,
+    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+  });
+};
+
 // Initialize the Google API client
-export const initGoogleApi = (): Promise<void> => {
+export const initGoogleApi = async (): Promise<void> => {
+  await loadGapiClient();
+  
   return new Promise((resolve, reject) => {
     try {
-      console.log('Starting Google API initialization with CLIENT_ID:', CLIENT_ID);
-      
-      if (!CLIENT_ID) {
-        console.error('Google Client ID is missing');
-        reject(new Error('Google Client ID is missing. Please check your .env file.'));
-        return;
-      }
-
-      // Check if gapi is already loaded
-      if (window.gapi && window.gapi.client) {
-        console.log('GAPI client already loaded, initializing client');
-        initClient(resolve, reject);
-        return;
-      }
-
-      console.log('Loading GAPI script');
-      // Load the Google API client library
-      window.gapi.load('client:auth2', () => {
-        console.log('GAPI client:auth2 loaded, initializing client');
-        initClient(resolve, reject);
+      // @ts-ignore
+      google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES.join(' '),
+        callback: (response: any) => {
+          if (response.access_token) {
+            // @ts-ignore
+            gapi.client.setToken(response.access_token);
+            resolve();
+          }
+        },
       });
     } catch (error) {
       console.error('Error in initGoogleApi:', error);
@@ -45,57 +56,39 @@ export const initGoogleApi = (): Promise<void> => {
   });
 };
 
-const initClient = (resolve: (value: void) => void, reject: (reason?: any) => void) => {
-  console.log('Initializing GAPI client with CLIENT_ID:', CLIENT_ID);
-  
-  window.gapi.client.init({
-    apiKey: API_KEY,
-    clientId: CLIENT_ID,
-    scope: SCOPES.join(' '),
-    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
-  }).then(() => {
-    console.log('GAPI client initialized successfully');
-    resolve();
-  }).catch((error: any) => {
-    console.error('Error initializing GAPI client:', error);
-    reject(error);
-  });
-};
-
 // Sign in the user
-export const signIn = async (): Promise<gapi.auth2.GoogleUser> => {
-  console.log('Attempting to sign in');
-  const authInstance = gapi.auth2.getAuthInstance();
-  
-  // Используем простой вызов без указания redirect_uri
-  return authInstance.signIn({
-    prompt: 'select_account'
+export const signIn = async (): Promise<any> => {
+  // @ts-ignore
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES.join(' '),
+    callback: () => {}, // Будет переопределен при вызове
+  });
+
+  return new Promise((resolve, reject) => {
+    try {
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+      resolve(true);
+    } catch (err) {
+      reject(err);
+    }
   });
 };
 
 // Sign out the user
 export const signOut = async (): Promise<void> => {
-  const authInstance = gapi.auth2.getAuthInstance();
-  return authInstance.signOut();
+  // @ts-ignore
+  google.accounts.oauth2.revoke(gapi.client.getToken().access_token);
+  // @ts-ignore
+  gapi.client.setToken(null);
 };
 
 // Check if user is signed in
 export const isSignedIn = (): boolean => {
   try {
-    if (!window.gapi || !window.gapi.auth2) {
-      console.log('gapi.auth2 is not available yet');
-      return false;
-    }
-    
-    const authInstance = gapi.auth2.getAuthInstance();
-    if (!authInstance) {
-      console.log('Auth instance is not available');
-      return false;
-    }
-    
-    const signedIn = authInstance.isSignedIn.get();
-    console.log('User is signed in:', signedIn);
-    return signedIn;
+    // @ts-ignore
+    const token = gapi.client.getToken();
+    return !!token;
   } catch (error) {
     console.error('Error checking if user is signed in:', error);
     return false;
@@ -103,18 +96,22 @@ export const isSignedIn = (): boolean => {
 };
 
 // Get user profile
-export const getUserProfile = (): { name: string; email: string; imageUrl: string } | null => {
+export const getUserProfile = async (): Promise<{ name: string; email: string; imageUrl: string } | null> => {
   try {
     if (!isSignedIn()) return null;
     
-    const authInstance = gapi.auth2.getAuthInstance();
-    const user = authInstance.currentUser.get();
-    const profile = user.getBasicProfile();
+    const response = await gapi.client.youtube.channels.list({
+      part: ['snippet'],
+      mine: true
+    });
+    
+    const channel = response.result.items?.[0];
+    if (!channel) return null;
     
     return {
-      name: profile.getName(),
-      email: profile.getEmail(),
-      imageUrl: profile.getImageUrl()
+      name: channel.snippet?.title || '',
+      email: '', // Email не доступен через YouTube API
+      imageUrl: channel.snippet?.thumbnails?.default?.url || ''
     };
   } catch (error) {
     console.error('Error getting user profile:', error);
