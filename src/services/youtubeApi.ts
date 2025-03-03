@@ -99,7 +99,6 @@ export const initGoogleApi = async (): Promise<void> => {
 
 // Sign in the user
 export const signIn = async (): Promise<any> => {
-  // @ts-ignore
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES.join(' '),
@@ -129,7 +128,8 @@ export const isSignedIn = (): boolean => {
   try {
     // @ts-ignore
     const token = gapi.client.getToken();
-    return !!token;
+    console.log('Current token:', token);
+    return !!token && !!token.access_token;
   } catch (error) {
     console.error('Error checking if user is signed in:', error);
     return false;
@@ -139,19 +139,27 @@ export const isSignedIn = (): boolean => {
 // Get user profile
 export const getUserProfile = async (): Promise<{ name: string; email: string; imageUrl: string } | null> => {
   try {
-    if (!isSignedIn()) return null;
+    if (!isSignedIn()) {
+      console.log('User is not signed in');
+      return null;
+    }
     
+    console.log('Fetching user profile...');
     const response = await gapi.client.youtube.channels.list({
-      part: ['snippet'],
+      part: ['snippet,brandingSettings'],
       mine: true
     });
     
+    console.log('Channel response:', response);
     const channel = response.result.items?.[0];
-    if (!channel) return null;
+    if (!channel) {
+      console.log('No channel found');
+      return null;
+    }
     
     return {
       name: channel.snippet?.title || '',
-      email: '', // Email не доступен через YouTube API
+      email: channel.brandingSettings?.channel?.title || '',
       imageUrl: channel.snippet?.thumbnails?.default?.url || ''
     };
   } catch (error) {
