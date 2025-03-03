@@ -16,48 +16,33 @@ const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 const loadGapiClient = async () => {
   console.log('Starting loadGapiClient...');
   
-  // Ждем загрузки GAPI
+  // Загружаем базовый GAPI
   await new Promise<void>((resolve) => {
-    console.log('Waiting for GAPI to load...');
-    window.gapiLoadedCallback = () => {
-      console.log('GAPI loaded successfully');
+    console.log('Loading GAPI...');
+    gapi.load('client:auth2', () => {
+      console.log('GAPI loaded');
       resolve();
-    };
-    if (window.gapi) {
-      console.log('GAPI already loaded');
-      resolve();
-    }
-  });
-
-  // Ждем загрузки GSI
-  await new Promise<void>((resolve) => {
-    console.log('Waiting for GSI to load...');
-    window.gisLoadedCallback = () => {
-      console.log('GSI loaded successfully');
-      resolve();
-    };
-    if (window.google?.accounts) {
-      console.log('GSI already loaded');
-      resolve();
-    }
+    });
   });
 
   // Инициализируем GAPI
-  await new Promise<void>((resolve, reject) => {
-    console.log('Initializing GAPI client...');
-    window.gapi.load('client', async () => {
-      try {
-        await window.gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
-        });
-        console.log('GAPI client initialized successfully');
+  await gapi.client.init({
+    apiKey: API_KEY,
+    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+  });
+  console.log('GAPI initialized');
+
+  // Ждем загрузку Google Identity Services
+  await new Promise<void>((resolve) => {
+    const checkGoogleIdentity = () => {
+      if (window.google?.accounts?.oauth2) {
+        console.log('Google Identity Services loaded');
         resolve();
-      } catch (error) {
-        console.error('Error initializing GAPI client:', error);
-        reject(error);
+      } else {
+        setTimeout(checkGoogleIdentity, 100);
       }
-    });
+    };
+    checkGoogleIdentity();
   });
 };
 

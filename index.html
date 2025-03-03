@@ -5,17 +5,10 @@
     <link rel="icon" type="image/x-icon" href="/favicon03032025.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Batch Uploader</title>
-    <!-- Загружаем Google API с callback'ом -->
-    <script>
-      function gapiLoaded() {
-        window.gapiLoadedCallback && window.gapiLoadedCallback();
-      }
-      function gisLoaded() {
-        window.gisLoadedCallback && window.gisLoadedCallback();
-      }
-    </script>
-    <script src="https://apis.google.com/js/api.js?onload=gapiLoaded"></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <!-- Сначала загружаем базовый GAPI -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <!-- Затем загружаем Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>
