@@ -44,14 +44,37 @@ export const initGoogleApi = async (): Promise<void> => {
   return new Promise<void>((resolve) => {
     gapi.load('client:auth2', async () => {
       try {
-        console.log('GAPI loaded, initializing client...');
-        await gapi.client.init({
-          apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
-          scope: SCOPES.join(' ')
-        });
-        console.log('GAPI client initialized');
+        console.log('GAPI loaded, checking if auth2 is already initialized...');
+        
+        // Проверяем, инициализирован ли уже auth2
+        let authInstance;
+        try {
+          authInstance = gapi.auth2.getAuthInstance();
+          console.log('Auth2 is already initialized');
+        } catch (e) {
+          console.log('Auth2 is not initialized yet');
+          authInstance = null;
+        }
+        
+        if (!authInstance) {
+          console.log('Initializing gapi.client and auth2...');
+          await gapi.client.init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+            scope: SCOPES.join(' ')
+          });
+          console.log('GAPI client and auth2 initialized');
+        } else {
+          console.log('Using existing auth2 instance');
+          // Инициализируем только gapi.client, так как auth2 уже инициализирован
+          await gapi.client.init({
+            apiKey: API_KEY,
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+          });
+          console.log('GAPI client initialized with existing auth2');
+        }
+        
         resolve();
       } catch (error) {
         console.error('Error initializing GAPI client:', error);
@@ -73,7 +96,27 @@ export const signIn = async (): Promise<any> => {
         return;
       }
       
-      const authInstance = gapi.auth2.getAuthInstance();
+      let authInstance;
+      try {
+        authInstance = gapi.auth2.getAuthInstance();
+      } catch (e) {
+        console.error('Error getting auth instance:', e);
+        // Если не удалось получить экземпляр, инициализируем auth2
+        gapi.auth2.init({
+          client_id: CLIENT_ID,
+          scope: SCOPES.join(' '),
+          ux_mode: 'redirect',
+          redirect_uri: window.location.origin
+        }).then(() => {
+          console.log('Auth2 initialized in signIn');
+          authInstance = gapi.auth2.getAuthInstance();
+          continueSignIn(authInstance);
+        }).catch(err => {
+          console.error('Error initializing auth2 in signIn:', err);
+          reject(err);
+        });
+        return;
+      }
       
       if (!authInstance) {
         console.error('Auth instance is not available');
@@ -81,22 +124,25 @@ export const signIn = async (): Promise<any> => {
         return;
       }
       
-      authInstance.signIn({
-        prompt: 'consent',
-        ux_mode: 'redirect'  // Используем redirect вместо popup
-      }).then(
-        (googleUser) => {
-          const authResponse = googleUser.getAuthResponse();
-          gapi.client.setToken({
-            access_token: authResponse.access_token
-          });
-          resolve(googleUser);
-        },
-        (error) => {
-          console.error('Error during sign in:', error);
-          reject(error);
-        }
-      );
+      continueSignIn(authInstance);
+      
+      function continueSignIn(authInstance) {
+        authInstance.signIn({
+          prompt: 'consent'
+        }).then(
+          (googleUser) => {
+            const authResponse = googleUser.getAuthResponse();
+            gapi.client.setToken({
+              access_token: authResponse.access_token
+            });
+            resolve(googleUser);
+          },
+          (error) => {
+            console.error('Error during sign in:', error);
+            reject(error);
+          }
+        );
+      }
     } catch (err) {
       console.error('Exception during sign in:', err);
       reject(err);

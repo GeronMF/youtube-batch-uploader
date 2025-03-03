@@ -24,6 +24,11 @@ export default defineConfig({
     host: true,
     port: 5173,
     https: true,
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
+    }
   },
   base: '/',
   resolve: {
