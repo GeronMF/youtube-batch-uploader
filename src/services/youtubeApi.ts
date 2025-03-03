@@ -70,15 +70,13 @@ export const initGoogleApi = async (): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
       console.log('Initializing token client...');
-      // @ts-ignore
-      google.accounts.oauth2.initTokenClient({
+      const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES.join(' '),
         callback: (response: any) => {
           console.log('Token client callback received:', response ? 'with token' : 'no token');
           if (response?.access_token) {
             console.log('Setting access token...');
-            // @ts-ignore
             gapi.client.setToken(response.access_token);
             console.log('Access token set successfully');
             resolve();
@@ -89,6 +87,9 @@ export const initGoogleApi = async (): Promise<void> => {
         },
       });
       console.log('Token client initialized successfully');
+      
+      // Запрашиваем токен сразу после инициализации
+      tokenClient.requestAccessToken({ prompt: 'consent' });
     } catch (error) {
       console.error('Error in initGoogleApi:', error);
       reject(error);
