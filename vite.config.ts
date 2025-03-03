@@ -30,4 +30,11 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  define: {
+    'process.env.VITE_ALLOWED_ORIGINS': JSON.stringify([
+      'https://youtubebatchuploader.fun',
+      'http://localhost:5173',
+      'https://localhost:5173'
+    ])
+  }
 });

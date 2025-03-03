@@ -13,24 +13,33 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 // API key from Google Developer Console
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
+const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
+
 const loadGapiClient = async () => {
   console.log('Starting loadGapiClient...');
   
   // Загружаем базовый GAPI
   await new Promise<void>((resolve) => {
     console.log('Loading GAPI...');
-    gapi.load('client:auth2', () => {
-      console.log('GAPI loaded');
-      resolve();
+    gapi.load('client:auth2', async () => {
+      try {
+        console.log('GAPI loaded, initializing client...');
+        await gapi.client.init({
+          apiKey: API_KEY,
+          clientId: CLIENT_ID,
+          scope: SCOPES.join(' '),
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+          hosted_domain: window.location.origin,
+          ux_mode: 'popup'
+        });
+        console.log('GAPI client initialized');
+        resolve();
+      } catch (error) {
+        console.error('Error initializing GAPI client:', error);
+        resolve(); // Продолжаем даже при ошибке
+      }
     });
   });
-
-  // Инициализируем GAPI
-  await gapi.client.init({
-    apiKey: API_KEY,
-    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
-  });
-  console.log('GAPI initialized');
 
   // Ждем загрузку Google Identity Services
   await new Promise<void>((resolve) => {
@@ -225,4 +234,5 @@ export const addComment = async (videoId: string, commentText: string): Promise<
       }
     }
   });
+};
 };
