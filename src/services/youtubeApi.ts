@@ -37,121 +37,91 @@ const loadGapiClient = async () => {
   });
 };
 
-// Инициализация Google API
+// Инициализация Google API с использованием новой библиотеки Identity Services
 export const initGoogleApi = async (): Promise<void> => {
   try {
-    console.log('GAPI loaded, checking if auth2 is already initialized...');
-    
-    // Загружаем клиентскую библиотеку
+    // Загружаем GAPI клиент
     await new Promise<void>((resolve, reject) => {
-      window.gapi.load('client:auth2', {
+      window.gapi.load('client', {
         callback: resolve,
         onerror: reject
       });
     });
 
-    // Инициализируем клиент с нашими параметрами
+    // Инициализируем GAPI клиент
     await window.gapi.client.init({
       apiKey: API_KEY,
-      clientId: CLIENT_ID,
-      scope: SCOPES.join(' '),
       discoveryDocs: [
         'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
       ]
     });
 
-    console.log('Google API initialized successfully');
-    
-    // Проверяем текущее состояние токена
-    const token = window.gapi.client.getToken();
-    console.log('Current token state:', {
-      hasToken: !!token,
-      hasAccessToken: !!token?.access_token,
-      tokenType: token?.token_type,
-      expiresIn: token?.expires_in
+    // Инициализируем Google Identity Services
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES.join(' '),
+      callback: (response) => {
+        if (response.error) {
+          console.error('Token client error:', response);
+          return;
+        }
+        
+        // Устанавливаем токен доступа
+        window.gapi.client.setToken({
+          access_token: response.access_token
+        });
+      }
     });
 
+    // Сохраняем tokenClient для использования в других функциях
+    window.tokenClient = tokenClient;
+    
+    console.log('Google API успешно инициализирован');
   } catch (error) {
-    console.error('Error initializing GAPI client:', error);
-    throw new Error(`You have created a new client application that uses APIs that your application is not yet approved to use. Please wait for approval.`);
+    console.error('Ошибка инициализации Google API:', error);
+    throw error;
   }
 };
 
-// Sign in the user
+// Обновленная функция входа с использованием Google Identity Services
 export const signIn = async (): Promise<any> => {
-  console.log('Starting sign in process...');
-  
-  return new Promise((resolve, reject) => {
-    try {
-      if (!gapi.auth2) {
-        console.error('gapi.auth2 is not initialized');
-        reject(new Error('gapi.auth2 is not initialized'));
-        return;
-      }
-      
-      let authInstance;
-      try {
-        authInstance = gapi.auth2.getAuthInstance();
-      } catch (e) {
-        console.error('Error getting auth instance:', e);
-        // Если не удалось получить экземпляр, инициализируем auth2
-        gapi.auth2.init({
-          client_id: CLIENT_ID,
-          scope: SCOPES.join(' '),
-          ux_mode: 'redirect',
-          redirect_uri: window.location.origin
-        }).then(() => {
-          console.log('Auth2 initialized in signIn');
-          authInstance = gapi.auth2.getAuthInstance();
-          continueSignIn(authInstance);
-        }).catch(err => {
-          console.error('Error initializing auth2 in signIn:', err);
-          reject(err);
-        });
-        return;
-      }
-      
-      if (!authInstance) {
-        console.error('Auth instance is not available');
-        reject(new Error('Auth instance is not available'));
-        return;
-      }
-      
-      continueSignIn(authInstance);
-      
-      function continueSignIn(authInstance) {
-        authInstance.signIn({
-          prompt: 'consent'
-        }).then(
-          (googleUser) => {
-            const authResponse = googleUser.getAuthResponse();
-            gapi.client.setToken({
-              access_token: authResponse.access_token
-            });
-            resolve(googleUser);
-          },
-          (error) => {
-            console.error('Error during sign in:', error);
-            reject(error);
-          }
-        );
-      }
-    } catch (err) {
-      console.error('Exception during sign in:', err);
-      reject(err);
+  try {
+    if (!window.tokenClient) {
+      throw new Error('Token client не инициализирован');
     }
-  });
+
+    return new Promise((resolve, reject) => {
+      window.tokenClient.callback = (response) => {
+        if (response.error) {
+          reject(response);
+          return;
+        }
+        
+        window.gapi.client.setToken({
+          access_token: response.access_token
+        });
+        resolve(response);
+      };
+
+      window.tokenClient.requestAccessToken({
+        prompt: 'consent'
+      });
+    });
+  } catch (error) {
+    console.error('Ошибка при входе:', error);
+    throw error;
+  }
 };
 
-// Sign out the user
+// Обновленная функция выхода
 export const signOut = async (): Promise<void> => {
-  const token = gapi.client.getToken();
+  const token = window.gapi.client.getToken();
   if (token) {
     try {
       await google.accounts.oauth2.revoke(token.access_token);
-      gapi.client.setToken(null);
+      window.gapi.client.setToken(null);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Ошибка при выходе:', error);
     }
   }
 };
@@ -162,7 +132,7 @@ export const isSignedIn = (): boolean => {
     const token = window.gapi.client.getToken();
     return !!token && !!token.access_token;
   } catch (error) {
-    console.error('Error checking if user is signed in:', error);
+    console.error('Ошибка при проверке авторизации:', error);
     return false;
   }
 };

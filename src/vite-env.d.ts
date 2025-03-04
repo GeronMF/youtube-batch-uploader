@@ -5,6 +5,7 @@ interface Window {
   gisLoadedCallback?: () => void;
   gapi: any;
   google?: any;
+  tokenClient?: any;
 }
 
 declare namespace gapi {
@@ -32,5 +33,23 @@ declare namespace gapi {
     }
     
     function getAuthInstance(): AuthInstance;
+  }
+
+  namespace client {
+    function setToken(token: { access_token: string } | null): void;
+    function getToken(): { access_token: string } | null;
+  }
+}
+
+declare namespace google {
+  namespace accounts {
+    namespace oauth2 {
+      function initTokenClient(config: {
+        client_id: string;
+        scope: string;
+        callback: (response: any) => void;
+      }): any;
+      function revoke(token: string): Promise<void>;
+    }
   }
 }
