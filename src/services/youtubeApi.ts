@@ -70,24 +70,7 @@ export const initGoogleApi = async (): Promise<void> => {
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
-    // Загружаем GAPI клиент
-    await new Promise<void>((resolve, reject) => {
-      window.gapi.load('client', {
-        callback: resolve,
-        onerror: reject
-      });
-    });
-
-    // Инициализируем GAPI клиент
-    await window.gapi.client.init({
-      apiKey: API_KEY,
-      discoveryDocs: [
-        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest',
-        'https://serviceusage.googleapis.com/$discovery/rest?version=v1'
-      ]
-    });
-
-    // Инициализируем Google Identity Services
+    // Инициализируем Google Identity Services ПЕРВЫМ
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES.join(' '),
@@ -105,6 +88,23 @@ export const initGoogleApi = async (): Promise<void> => {
 
     // Сохраняем tokenClient для использования в других функциях
     window.tokenClient = tokenClient;
+
+    // ЗАТЕМ загружаем GAPI клиент
+    await new Promise<void>((resolve, reject) => {
+      window.gapi.load('client', {
+        callback: resolve,
+        onerror: reject
+      });
+    });
+
+    // И ПОСЛЕ загрузки клиента инициализируем его
+    await window.gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: [
+        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest',
+        'https://serviceusage.googleapis.com/$discovery/rest?version=v1'
+      ]
+    });
     
     console.log('Google API initialized successfully');
     
