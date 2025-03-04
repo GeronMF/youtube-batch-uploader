@@ -32,16 +32,23 @@ function App() {
         setApiError(null);
         setApiErrorDetails(null);
         
-        // Check if user is already signed in
-        if (isSignedIn()) {
-          console.log('User is already signed in');
-          setAuthState({
-            isSignedIn: true,
-            accessToken: gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token,
-            userProfile: getUserProfile()
-          });
-        } else {
-          console.log('User is not signed in');
+        // Проверяем авторизацию только после успешной инициализации
+        try {
+          const signedIn = isSignedIn();
+          if (signedIn) {
+            console.log('User is already signed in');
+            const profile = await getUserProfile();
+            setAuthState({
+              isSignedIn: true,
+              accessToken: gapi.client.getToken()?.access_token || null,
+              userProfile: profile
+            });
+          } else {
+            console.log('User is not signed in');
+          }
+        } catch (authError) {
+          console.log('Error checking auth state:', authError);
+          // Не показываем ошибку пользователю, просто логируем
         }
       } catch (error: any) {
         console.error('Error initializing Google API:', error);
