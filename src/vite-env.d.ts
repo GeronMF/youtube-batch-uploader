@@ -1,11 +1,9 @@
 /// <reference types="vite/client" />
 
 interface Window {
-  gapiLoadedCallback?: () => void;
-  gisLoadedCallback?: () => void;
   gapi: any;
-  google?: any;
-  tokenClient?: any;
+  google: any;
+  tokenClient: any;
 }
 
 declare namespace gapi {
