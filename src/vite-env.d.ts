@@ -34,8 +34,19 @@ declare namespace gapi {
   }
 
   namespace client {
+    function init(config: {
+      apiKey: string;
+      discoveryDocs: string[];
+    }): Promise<void>;
+    
     function setToken(token: { access_token: string } | null): void;
     function getToken(): { access_token: string } | null;
+    
+    namespace youtube {
+      namespace channels {
+        function list(params: any): Promise<any>;
+      }
+    }
   }
 }
 
@@ -47,6 +58,7 @@ declare namespace google {
         scope: string;
         callback: (response: any) => void;
       }): any;
+      
       function revoke(token: string): Promise<void>;
     }
   }

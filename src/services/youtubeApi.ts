@@ -4,7 +4,8 @@ import { VideoFile } from '../types';
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
-  'https://www.googleapis.com/auth/youtube.force-ssl'
+  'https://www.googleapis.com/auth/youtube.force-ssl',
+  'https://www.googleapis.com/auth/serviceusage'
 ];
 
 // Client ID from Google Developer Console
@@ -24,7 +25,7 @@ export const initGoogleApi = async (): Promise<void> => {
   try {
     console.log('Starting Google API initialization...');
     
-    // Загружаем только GAPI клиент
+    // Загружаем GAPI клиент
     await new Promise<void>((resolve, reject) => {
       window.gapi.load('client', {
         callback: resolve,
@@ -35,7 +36,10 @@ export const initGoogleApi = async (): Promise<void> => {
     // Инициализируем GAPI клиент
     await window.gapi.client.init({
       apiKey: API_KEY,
-      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
+      discoveryDocs: [
+        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest',
+        'https://serviceusage.googleapis.com/$discovery/rest?version=v1'
+      ]
     });
 
     // Инициализируем Google Identity Services
