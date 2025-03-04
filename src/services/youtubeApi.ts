@@ -20,11 +20,56 @@ const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
 console.log('API Key exists:', !!API_KEY);
 console.log('Client ID exists:', !!CLIENT_ID);
 
+// Функция для ожидания загрузки GAPI
+const waitForGAPI = (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (window.gapi) {
+      resolve();
+      return;
+    }
+
+    const checkGAPI = () => {
+      if (window.gapi) {
+        resolve();
+      } else {
+        setTimeout(checkGAPI, 100);
+      }
+    };
+
+    checkGAPI();
+  });
+};
+
+// Функция для ожидания загрузки Google Identity Services
+const waitForGIS = (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+
+    const checkGIS = () => {
+      if (window.google?.accounts?.oauth2) {
+        resolve();
+      } else {
+        setTimeout(checkGIS, 100);
+      }
+    };
+
+    checkGIS();
+  });
+};
+
 // Инициализация Google API
 export const initGoogleApi = async (): Promise<void> => {
   try {
     console.log('Starting Google API initialization...');
     
+    // Ждем загрузки обоих скриптов
+    console.log('Waiting for GAPI and GIS to load...');
+    await Promise.all([waitForGAPI(), waitForGIS()]);
+    console.log('GAPI and GIS loaded successfully');
+
     // Загружаем GAPI клиент
     await new Promise<void>((resolve, reject) => {
       window.gapi.load('client', {
