@@ -37,51 +37,44 @@ const loadGapiClient = async () => {
   });
 };
 
-// Initialize the Google API client
+// Инициализация Google API
 export const initGoogleApi = async (): Promise<void> => {
-  console.log('Starting initGoogleApi...');
-  
-  return new Promise<void>((resolve) => {
-    gapi.load('client:auth2', async () => {
-      try {
-        console.log('GAPI loaded, checking if auth2 is already initialized...');
-        
-        // Проверяем, инициализирован ли уже auth2
-        let authInstance;
-        try {
-          authInstance = gapi.auth2.getAuthInstance();
-          console.log('Auth2 is already initialized');
-        } catch (e) {
-          console.log('Auth2 is not initialized yet');
-          authInstance = null;
-        }
-        
-        if (!authInstance) {
-          console.log('Initializing gapi.client and auth2...');
-          await gapi.client.init({
-            apiKey: API_KEY,
-            clientId: CLIENT_ID,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
-            scope: SCOPES.join(' ')
-          });
-          console.log('GAPI client and auth2 initialized');
-        } else {
-          console.log('Using existing auth2 instance');
-          // Инициализируем только gapi.client, так как auth2 уже инициализирован
-          await gapi.client.init({
-            apiKey: API_KEY,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
-          });
-          console.log('GAPI client initialized with existing auth2');
-        }
-        
-        resolve();
-      } catch (error) {
-        console.error('Error initializing GAPI client:', error);
-        resolve(); // Продолжаем даже при ошибке
-      }
+  try {
+    console.log('GAPI loaded, checking if auth2 is already initialized...');
+    
+    // Загружаем клиентскую библиотеку
+    await new Promise<void>((resolve, reject) => {
+      window.gapi.load('client:auth2', {
+        callback: resolve,
+        onerror: reject
+      });
     });
-  });
+
+    // Инициализируем клиент с нашими параметрами
+    await window.gapi.client.init({
+      apiKey: API_KEY,
+      clientId: CLIENT_ID,
+      scope: SCOPES.join(' '),
+      discoveryDocs: [
+        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
+      ]
+    });
+
+    console.log('Google API initialized successfully');
+    
+    // Проверяем текущее состояние токена
+    const token = window.gapi.client.getToken();
+    console.log('Current token state:', {
+      hasToken: !!token,
+      hasAccessToken: !!token?.access_token,
+      tokenType: token?.token_type,
+      expiresIn: token?.expires_in
+    });
+
+  } catch (error) {
+    console.error('Error initializing GAPI client:', error);
+    throw new Error(`You have created a new client application that uses APIs that your application is not yet approved to use. Please wait for approval.`);
+  }
 };
 
 // Sign in the user
@@ -163,16 +156,10 @@ export const signOut = async (): Promise<void> => {
   }
 };
 
-// Check if user is signed in
+// Проверка авторизации
 export const isSignedIn = (): boolean => {
   try {
-    const token = gapi.client.getToken();
-    console.log('Current token state:', {
-      hasToken: !!token,
-      hasAccessToken: !!token?.access_token,
-      tokenType: token?.token_type,
-      expiresIn: token?.expires_in
-    });
+    const token = window.gapi.client.getToken();
     return !!token && !!token.access_token;
   } catch (error) {
     console.error('Error checking if user is signed in:', error);
