@@ -37,80 +37,136 @@ const loadGapiClient = async () => {
   });
 };
 
-// Инициализация Google API с использованием новой библиотеки Identity Services
+// Инициализация Google API
 export const initGoogleApi = async (): Promise<void> => {
   try {
-    // Загружаем GAPI клиент
+    console.log('Загрузка GAPI...');
+    
+    // Сначала загружаем базовый GAPI
     await new Promise<void>((resolve, reject) => {
       window.gapi.load('client', {
         callback: resolve,
-        onerror: reject
+        onerror: reject,
+        timeout: 10000, // 10 секунд таймаут
+        ontimeout: reject
       });
     });
-
-    // Инициализируем GAPI клиент
+    
+    console.log('GAPI загружен, инициализируем клиент...');
+    // Инициализируем клиент API
     await window.gapi.client.init({
       apiKey: API_KEY,
-      discoveryDocs: [
-        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
-      ]
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest']
     });
-
-    // Инициализируем Google Identity Services
-    const tokenClient = google.accounts.oauth2.initTokenClient({
+    
+    console.log('Клиент GAPI инициализирован, загружаем auth2...');
+    // Затем загружаем auth2
+    await new Promise<void>((resolve, reject) => {
+      window.gapi.load('auth2', {
+        callback: resolve,
+        onerror: reject,
+        timeout: 10000,
+        ontimeout: reject
+      });
+    });
+    
+    console.log('Auth2 загружен, инициализируем auth2...');
+    // Инициализируем auth2 с нашими параметрами
+    await window.gapi.auth2.init({
       client_id: CLIENT_ID,
-      scope: SCOPES.join(' '),
-      callback: (response) => {
-        if (response.error) {
-          console.error('Token client error:', response);
-          return;
-        }
-        
-        // Устанавливаем токен доступа
-        window.gapi.client.setToken({
-          access_token: response.access_token
-        });
-      }
+      scope: SCOPES.join(' ')
     });
-
-    // Сохраняем tokenClient для использования в других функциях
-    window.tokenClient = tokenClient;
     
     console.log('Google API успешно инициализирован');
+    
+    // Проверяем состояние аутентификации
+    const isSignedIn = window.gapi.auth2.getAuthInstance().isSignedIn.get();
+    console.log('Пользователь вошел в систему:', isSignedIn);
+    
   } catch (error) {
     console.error('Ошибка инициализации Google API:', error);
     throw error;
   }
 };
 
-// Обновленная функция входа с использованием Google Identity Services
-export const signIn = async (): Promise<any> => {
-  try {
-    if (!window.tokenClient) {
-      throw new Error('Token client не инициализирован');
-    }
-
-    return new Promise((resolve, reject) => {
-      window.tokenClient.callback = (response) => {
-        if (response.error) {
-          reject(response);
-          return;
-        }
-        
+// Функция для выполнения входа
+function performSignIn(authInstance: gapi.auth2.AuthInstance, resolve: (value: any) => void, reject: (reason?: any) => void) {
+  authInstance.signIn({
+    prompt: 'consent',
+    ux_mode: 'popup'
+  }).then(
+    (googleUser) => {
+      // Проверяем, что googleUser имеет метод getAuthResponse
+      if (typeof googleUser.getAuthResponse !== 'function') {
+        console.error('googleUser не имеет метода getAuthResponse:', googleUser);
+        // Пробуем получить токен альтернативным способом
+        const token = authInstance.currentUser.get().getAuthResponse();
         window.gapi.client.setToken({
-          access_token: response.access_token
+          access_token: token.access_token
         });
-        resolve(response);
-      };
+        resolve(googleUser);
+      } else {
+        const authResponse = googleUser.getAuthResponse();
+        window.gapi.client.setToken({
+          access_token: authResponse.access_token
+        });
+        resolve(googleUser);
+      }
+    },
+    (error) => {
+      console.error('Ошибка при входе:', error);
+      reject(error);
+    }
+  );
+}
 
-      window.tokenClient.requestAccessToken({
-        prompt: 'consent'
-      });
-    });
-  } catch (error) {
-    console.error('Ошибка при входе:', error);
-    throw error;
-  }
+// Обновленная функция входа
+export const signIn = async (): Promise<any> => {
+  console.log('Starting sign in process...');
+  
+  return new Promise((resolve, reject) => {
+    try {
+      // Проверяем правильно ли инициализирован auth2
+      if (!window.gapi.auth2) {
+        console.log('gapi.auth2 не инициализирован, инициализируем...');
+        window.gapi.auth2.init({
+          client_id: CLIENT_ID,
+          scope: SCOPES.join(' ')
+        }).then(() => {
+          const authInstance = window.gapi.auth2.getAuthInstance();
+          if (!authInstance) {
+            reject(new Error('Не удалось получить экземпляр аутентификации'));
+            return;
+          }
+          
+          performSignIn(authInstance, resolve, reject);
+        }).catch(err => {
+          console.error('Ошибка инициализации gapi.auth2:', err);
+          reject(err);
+        });
+        return;
+      }
+      
+      let authInstance;
+      try {
+        authInstance = window.gapi.auth2.getAuthInstance();
+      } catch (e) {
+        console.error('Ошибка получения экземпляра аутентификации:', e);
+        reject(e);
+        return;
+      }
+      
+      if (!authInstance) {
+        reject(new Error('Экземпляр аутентификации не доступен'));
+        return;
+      }
+      
+      performSignIn(authInstance, resolve, reject);
+    } catch (err) {
+      console.error('Исключение при входе:', err);
+      reject(err);
+    }
+  });
 };
 
 // Обновленная функция выхода
