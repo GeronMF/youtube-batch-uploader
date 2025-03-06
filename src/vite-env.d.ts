@@ -63,3 +63,9 @@ declare namespace google {
     }
   }
 }
+
+interface ImportMetaEnv {
+  VITE_GOOGLE_CLIENT_ID: string;
+  VITE_YOUTUBE_API_KEY: string;
+  VITE_GOOGLE_CLIENT_SECRET: string;
+}

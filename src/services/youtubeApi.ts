@@ -20,6 +20,10 @@ const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
 console.log('API Key exists:', !!API_KEY);
 console.log('Client ID exists:', !!CLIENT_ID);
 
+// Добавим константы для токенов
+const REFRESH_TOKEN = '1//04siXa3ygI_MMCgYIARAAGAQSNwF-L9IroIq31Iy2j3nMs8xaFBQu8v83Oo2FQyXF6jgPJ1Mhhf9DN0VOt6GV-Y6s4Dznp-MDWJE';
+const INITIAL_ACCESS_TOKEN = 'ya29.a0AeXRPp44HtPxM6cxBXdFfZQqkZ8BGBbCs9FMrWZo_HYvzog6dAG81EVZAS3Fw-yOdG_7jQkPN7LR3KVrqj9YinHEgKEZREZnKrG2dB285aW9XcWt1Vn1w7At0N6YQMxTTG9riIGPBn20Unou0zBHV-tNcsYETokRCEKvSvjTaCgYKAfsSARISFQHGX2MiosGactTAcAXoRIm31dn30w0175';
+
 // Функция для ожидания загрузки GAPI
 const waitForGAPI = (): Promise<void> => {
   return new Promise((resolve) => {
@@ -66,38 +70,15 @@ export const initGoogleApi = async (): Promise<void> => {
     console.log('Starting Google API initialization...');
     
     // Ждем загрузки обоих скриптов
-    console.log('Waiting for GAPI and GIS to load...');
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
-    // Инициализируем Google Identity Services ПЕРВЫМ
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES.join(' '),
-      callback: (response) => {
-        if (response.error) {
-          throw response;
-        }
-        
-        // Устанавливаем токен для GAPI клиента
-        window.gapi.client.setToken({
-          access_token: response.access_token
-        });
-      }
+    // Устанавливаем начальный токен
+    window.gapi.client.setToken({
+      access_token: INITIAL_ACCESS_TOKEN
     });
 
-    // Сохраняем tokenClient для использования в других функциях
-    window.tokenClient = tokenClient;
-
-    // ЗАТЕМ загружаем GAPI клиент
-    await new Promise<void>((resolve, reject) => {
-      window.gapi.load('client', {
-        callback: resolve,
-        onerror: reject
-      });
-    });
-
-    // И ПОСЛЕ загрузки клиента инициализируем его
+    // Инициализируем GAPI клиент
     await window.gapi.client.init({
       apiKey: API_KEY,
       discoveryDocs: [
@@ -105,6 +86,24 @@ export const initGoogleApi = async (): Promise<void> => {
         'https://serviceusage.googleapis.com/$discovery/rest?version=v1'
       ]
     });
+
+    // Инициализируем Google Identity Services
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES.join(' '),
+      callback: async (response) => {
+        if (response.error) {
+          throw response;
+        }
+        
+        // Обновляем токен
+        window.gapi.client.setToken({
+          access_token: response.access_token
+        });
+      }
+    });
+
+    window.tokenClient = tokenClient;
     
     console.log('Google API initialized successfully');
     
@@ -114,48 +113,60 @@ export const initGoogleApi = async (): Promise<void> => {
   }
 };
 
-// Функция входа
-export const signIn = async (): Promise<void> => {
-  if (!window.tokenClient) {
-    throw new Error('Token client not initialized');
-  }
+// Добавим функцию обновления токена через refresh token
+const refreshAccessToken = async () => {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+        refresh_token: REFRESH_TOKEN,
+        grant_type: 'refresh_token'
+      })
+    });
 
-  return new Promise((resolve, reject) => {
-    try {
-      window.tokenClient.callback = (response) => {
-        if (response.error) {
-          reject(response);
-          return;
-        }
-        resolve();
-      };
-
-      window.tokenClient.requestAccessToken({
-        prompt: 'consent'
+    const data = await response.json();
+    if (data.access_token) {
+      window.gapi.client.setToken({
+        access_token: data.access_token
       });
-    } catch (error) {
-      reject(error);
     }
-  });
-};
-
-// Функция выхода
-export const signOut = async (): Promise<void> => {
-  const token = window.gapi.client.getToken();
-  if (token) {
-    try {
-      await window.google.accounts.oauth2.revoke(token.access_token);
-      window.gapi.client.setToken(null);
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    throw error;
   }
 };
 
-// Проверка авторизации
-export const isSignedIn = (): boolean => {
+// Обновляем функцию проверки авторизации
+export const isSignedIn = async (): Promise<boolean> => {
   const token = window.gapi.client.getToken();
-  return !!token && !!token.access_token;
+  if (!token?.access_token) {
+    return false;
+  }
+
+  try {
+    // Пробуем сделать тестовый запрос
+    await gapi.client.youtube.channels.list({
+      part: ['snippet'],
+      mine: true
+    });
+    return true;
+  } catch (error: any) {
+    if (error?.status === 401) {
+      // Токен истек, пробуем обновить
+      try {
+        await refreshAccessToken();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
 };
 
 // Get user profile
