@@ -195,15 +195,29 @@ export const isSignedIn = async (): Promise<boolean> => {
 // Get user profile
 export const getUserProfile = async (): Promise<{ name: string; email: string; imageUrl: string } | null> => {
   try {
-    if (!isSignedIn()) {
-      console.log('User is not signed in');
+    // Проверяем токен
+    const token = window.gapi.client.getToken();
+    if (!token?.access_token) {
+      console.log('No access token available');
       return null;
     }
+
+    console.log('Fetching user profile with token:', token.access_token);
     
-    console.log('Fetching user profile...');
+    // Пробуем обновить токен перед запросом
+    try {
+      await refreshAccessToken();
+    } catch (error) {
+      console.log('Failed to refresh token, continuing with current token');
+    }
+    
+    // Делаем запрос с обновленным токеном
     const response = await gapi.client.youtube.channels.list({
       part: ['snippet,brandingSettings'],
-      mine: true
+      mine: true,
+      headers: {
+        'Authorization': `Bearer ${window.gapi.client.getToken()?.access_token}`
+      }
     });
     
     console.log('Channel response:', response);
