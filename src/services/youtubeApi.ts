@@ -296,7 +296,48 @@ export const addComment = async (videoId: string, commentText: string): Promise<
   });
 };
 
-// Перемещаем включение API в функцию signIn
+// Функция для обмена authorization code на токены
+const exchangeAuthCode = async (authCode: string) => {
+  try {
+    console.log('Exchanging authorization code for tokens...');
+    
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        code: authCode,
+        client_id: CLIENT_ID,
+        client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+        redirect_uri: window.location.origin,
+        grant_type: 'authorization_code'
+      })
+    });
+
+    const data = await response.json();
+    if (data.access_token) {
+      // Сохраняем токены
+      window.gapi.client.setToken({
+        access_token: data.access_token
+      });
+      
+      // Выводим refresh_token для сохранения
+      if (data.refresh_token) {
+        console.log('New refresh token:', data.refresh_token);
+      }
+
+      return data;
+    } else {
+      throw new Error('Failed to exchange auth code for tokens');
+    }
+  } catch (error) {
+    console.error('Error exchanging auth code:', error);
+    throw error;
+  }
+};
+
+// Обновляем функцию signIn
 export const signIn = async (): Promise<void> => {
   if (!window.tokenClient) {
     throw new Error('Token client not initialized');
@@ -311,12 +352,14 @@ export const signIn = async (): Promise<void> => {
         }
 
         try {
-          // Сначала устанавливаем токен
-          window.gapi.client.setToken({
-            access_token: response.access_token
-          });
+          // Если получили authorization code
+          if (response.code) {
+            // Обмениваем код на токены
+            const tokens = await exchangeAuthCode(response.code);
+            console.log('Successfully exchanged auth code for tokens');
+          }
 
-          // Пробуем получить профиль для проверки токена
+          // Проверяем авторизацию
           const testResponse = await gapi.client.youtube.channels.list({
             part: ['snippet'],
             mine: true
@@ -334,8 +377,10 @@ export const signIn = async (): Promise<void> => {
         }
       };
 
+      // Запрашиваем и code, и token
       window.tokenClient.requestAccessToken({
-        prompt: 'consent'
+        prompt: 'consent',
+        response_type: 'code token'
       });
     } catch (error) {
       reject(error);
