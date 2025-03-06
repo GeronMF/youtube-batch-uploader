@@ -310,20 +310,26 @@ export const signIn = async (): Promise<void> => {
           return;
         }
 
-        window.gapi.client.setToken({
-          access_token: response.access_token
-        });
-
-        // Включаем API после успешной авторизации
         try {
-          await Promise.all([
-            enableGoogleService('youtube.googleapis.com'),
-            enableGoogleService('serviceusage.googleapis.com')
-          ]);
-          console.log('All required APIs enabled successfully');
-          resolve();
+          // Сначала устанавливаем токен
+          window.gapi.client.setToken({
+            access_token: response.access_token
+          });
+
+          // Пробуем получить профиль для проверки токена
+          const testResponse = await gapi.client.youtube.channels.list({
+            part: ['snippet'],
+            mine: true
+          });
+
+          if (testResponse.status === 200) {
+            console.log('Successfully authenticated with YouTube');
+            resolve();
+          } else {
+            reject(new Error('Failed to authenticate with YouTube'));
+          }
         } catch (error) {
-          console.error('Error enabling APIs:', error);
+          console.error('Error during authentication:', error);
           reject(error);
         }
       };
