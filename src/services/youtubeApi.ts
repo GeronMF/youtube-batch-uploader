@@ -27,13 +27,13 @@ const INITIAL_ACCESS_TOKEN = import.meta.env.VITE_GOOGLE_ACCESS_TOKEN || '';
 // Функция для ожидания загрузки GAPI
 const waitForGAPI = (): Promise<void> => {
   return new Promise((resolve) => {
-    if (window.gapi) {
+    if (window.gapi?.client) {
       resolve();
       return;
     }
 
     const checkGAPI = () => {
-      if (window.gapi) {
+      if (window.gapi?.client) {
         resolve();
       } else {
         setTimeout(checkGAPI, 100);
