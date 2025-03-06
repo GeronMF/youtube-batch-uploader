@@ -20,9 +20,9 @@ const ALLOWED_ORIGINS = process.env.VITE_ALLOWED_ORIGINS || [];
 console.log('API Key exists:', !!API_KEY);
 console.log('Client ID exists:', !!CLIENT_ID);
 
-// Добавим константы для токенов
-const REFRESH_TOKEN = '1//04siXa3ygI_MMCgYIARAAGAQSNwF-L9IroIq31Iy2j3nMs8xaFBQu8v83Oo2FQyXF6jgPJ1Mhhf9DN0VOt6GV-Y6s4Dznp-MDWJE';
-const INITIAL_ACCESS_TOKEN = 'ya29.a0AeXRPp44HtPxM6cxBXdFfZQqkZ8BGBbCs9FMrWZo_HYvzog6dAG81EVZAS3Fw-yOdG_7jQkPN7LR3KVrqj9YinHEgKEZREZnKrG2dB285aW9XcWt1Vn1w7At0N6YQMxTTG9riIGPBn20Unou0zBHV-tNcsYETokRCEKvSvjTaCgYKAfsSARISFQHGX2MiosGactTAcAXoRIm31dn30w0175';
+// Убираем токены из кода
+const REFRESH_TOKEN = import.meta.env.VITE_GOOGLE_REFRESH_TOKEN || '';
+const INITIAL_ACCESS_TOKEN = import.meta.env.VITE_GOOGLE_ACCESS_TOKEN || '';
 
 // Функция для ожидания загрузки GAPI
 const waitForGAPI = (): Promise<void> => {

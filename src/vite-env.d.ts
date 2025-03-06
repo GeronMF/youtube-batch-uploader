@@ -68,4 +68,6 @@ interface ImportMetaEnv {
   VITE_GOOGLE_CLIENT_ID: string;
   VITE_YOUTUBE_API_KEY: string;
   VITE_GOOGLE_CLIENT_SECRET: string;
+  VITE_GOOGLE_REFRESH_TOKEN: string;
+  VITE_GOOGLE_ACCESS_TOKEN: string;
 }
