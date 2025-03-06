@@ -92,16 +92,14 @@ const enableGoogleService = async (serviceName: string) => {
   }
 };
 
-// Инициализация Google API
+// Убираем включение API из initGoogleApi
 export const initGoogleApi = async (): Promise<void> => {
   try {
     console.log('Starting Google API initialization...');
     
-    // Ждем загрузки обоих скриптов
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
-    // СНАЧАЛА инициализируем GAPI клиент
     await window.gapi.client.init({
       apiKey: API_KEY,
       discoveryDocs: [
@@ -110,14 +108,12 @@ export const initGoogleApi = async (): Promise<void> => {
       ]
     });
 
-    // ПОТОМ устанавливаем начальный токен
     if (INITIAL_ACCESS_TOKEN) {
       window.gapi.client.setToken({
         access_token: INITIAL_ACCESS_TOKEN
       });
     }
 
-    // В КОНЦЕ инициализируем Google Identity Services
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES.join(' '),
@@ -133,14 +129,6 @@ export const initGoogleApi = async (): Promise<void> => {
 
     window.tokenClient = tokenClient;
     console.log('Google API initialized successfully');
-    
-    // После успешной инициализации включаем нужные API
-    await Promise.all([
-      enableGoogleService('youtube.googleapis.com'),
-      enableGoogleService('serviceusage.googleapis.com')
-    ]);
-
-    console.log('All required APIs enabled successfully');
     
   } catch (error) {
     console.error('Error during API initialization:', error);
@@ -308,7 +296,7 @@ export const addComment = async (videoId: string, commentText: string): Promise<
   });
 };
 
-// Функция входа
+// Перемещаем включение API в функцию signIn
 export const signIn = async (): Promise<void> => {
   if (!window.tokenClient) {
     throw new Error('Token client not initialized');
@@ -316,12 +304,28 @@ export const signIn = async (): Promise<void> => {
 
   return new Promise((resolve, reject) => {
     try {
-      window.tokenClient.callback = (response) => {
+      window.tokenClient.callback = async (response) => {
         if (response.error) {
           reject(response);
           return;
         }
-        resolve();
+
+        window.gapi.client.setToken({
+          access_token: response.access_token
+        });
+
+        // Включаем API после успешной авторизации
+        try {
+          await Promise.all([
+            enableGoogleService('youtube.googleapis.com'),
+            enableGoogleService('serviceusage.googleapis.com')
+          ]);
+          console.log('All required APIs enabled successfully');
+          resolve();
+        } catch (error) {
+          console.error('Error enabling APIs:', error);
+          reject(error);
+        }
       };
 
       window.tokenClient.requestAccessToken({
