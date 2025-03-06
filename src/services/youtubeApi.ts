@@ -26,13 +26,13 @@ const INITIAL_ACCESS_TOKEN = import.meta.env.VITE_GOOGLE_ACCESS_TOKEN || '';
 // Функция для ожидания загрузки GAPI
 const waitForGAPI = (): Promise<void> => {
   return new Promise((resolve) => {
-    if (window.gapi?.client) {
+    if (window.gapi?.auth2) {
       resolve();
       return;
     }
 
     const checkGAPI = () => {
-      if (window.gapi?.client) {
+      if (window.gapi?.auth2) {
         resolve();
       } else {
         setTimeout(checkGAPI, 100);
@@ -40,26 +40,6 @@ const waitForGAPI = (): Promise<void> => {
     };
 
     checkGAPI();
-  });
-};
-
-// Функция для ожидания загрузки Google Identity Services
-const waitForGIS = (): Promise<void> => {
-  return new Promise((resolve) => {
-    if (window.google?.accounts?.oauth2) {
-      resolve();
-      return;
-    }
-
-    const checkGIS = () => {
-      if (window.google?.accounts?.oauth2) {
-        resolve();
-      } else {
-        setTimeout(checkGIS, 100);
-      }
-    };
-
-    checkGIS();
   });
 };
 
@@ -92,26 +72,18 @@ const enableGoogleService = async (serviceName: string) => {
   }
 };
 
-// Убираем включение API из initGoogleApi
+// Убираем waitForGIS и другие неиспользуемые функции
+
 export const initGoogleApi = async (): Promise<void> => {
   try {
     console.log('Starting Google API initialization...');
     
-    await Promise.all([waitForGAPI(), waitForGIS()]);
-    console.log('GAPI and GIS loaded successfully');
+    await waitForGAPI();
+    console.log('GAPI loaded successfully');
 
     await window.gapi.client.init({
       apiKey: API_KEY,
       clientId: CLIENT_ID,
-      discoveryDocs: [
-        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
-      ],
-      scope: SCOPES.join(' ')
-    });
-
-    // Инициализируем auth2
-    await window.gapi.auth2.init({
-      client_id: CLIENT_ID,
       scope: SCOPES.join(' ')
     });
 

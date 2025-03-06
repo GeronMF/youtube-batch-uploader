@@ -5,18 +5,18 @@
     <link rel="icon" type="image/x-icon" href="/favicon03032025.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Batch Uploader</title>
-    <!-- Загружаем GAPI первым -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <!-- Затем загружаем Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Загружаем только один скрипт GAPI -->
+    <script src="https://apis.google.com/js/platform.js"></script>
+    
     <script>
-      function gapiLoaded() {
+      // Инициализируем GAPI после загрузки страницы
+      window.onload = function() {
         gapi.load('client:auth2', function() {
-          console.log('GAPI client and auth2 loaded');
+          console.log('GAPI platform loaded');
         });
       }
     </script>
-    <script src="https://apis.google.com/js/api.js?onload=gapiLoaded"></script>
   </head>
   <body>
     <div id="root"></div>
