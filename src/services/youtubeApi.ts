@@ -297,3 +297,16 @@ export const signIn = async (): Promise<void> => {
     }
   });
 };
+
+// Функция выхода
+export const signOut = async (): Promise<void> => {
+  const token = window.gapi.client.getToken();
+  if (token) {
+    try {
+      await window.google.accounts.oauth2.revoke(token.access_token);
+      window.gapi.client.setToken(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  }
+};
