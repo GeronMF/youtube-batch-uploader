@@ -100,12 +100,12 @@ export const initGoogleApi = async (): Promise<void> => {
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
+    // Сначала инициализируем только с YouTube API
     await window.gapi.client.init({
       apiKey: API_KEY,
       discoveryDocs: [
-        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest',
-        'https://serviceusage.googleapis.com/$discovery/rest?version=v1'
-      ]
+        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
+      ]  // Убираем serviceusage API
     });
 
     if (INITIAL_ACCESS_TOKEN) {
