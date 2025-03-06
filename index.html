@@ -8,12 +8,11 @@
     <!-- Загружаем GAPI первым -->
     <script src="https://apis.google.com/js/api.js"></script>
     <!-- Затем загружаем Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client"></script>
-    <!-- Добавляем скрипт для явной загрузки GAPI клиента -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
       function gapiLoaded() {
-        gapi.load('client', function() {
-          console.log('GAPI client loaded');
+        gapi.load('client:auth2', function() {
+          console.log('GAPI client and auth2 loaded');
         });
       }
     </script>

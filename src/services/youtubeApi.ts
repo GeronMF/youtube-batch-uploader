@@ -100,34 +100,21 @@ export const initGoogleApi = async (): Promise<void> => {
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
-    // Сначала инициализируем только с YouTube API
     await window.gapi.client.init({
       apiKey: API_KEY,
+      clientId: CLIENT_ID,
       discoveryDocs: [
         'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
-      ]  // Убираем serviceusage API
+      ],
+      scope: SCOPES.join(' ')
     });
 
-    if (INITIAL_ACCESS_TOKEN) {
-      window.gapi.client.setToken({
-        access_token: INITIAL_ACCESS_TOKEN
-      });
-    }
-
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+    // Инициализируем auth2
+    await window.gapi.auth2.init({
       client_id: CLIENT_ID,
-      scope: SCOPES.join(' '),
-      callback: async (response) => {
-        if (response.error) {
-          throw response;
-        }
-        window.gapi.client.setToken({
-          access_token: response.access_token
-        });
-      }
+      scope: SCOPES.join(' ')
     });
 
-    window.tokenClient = tokenClient;
     console.log('Google API initialized successfully');
     
   } catch (error) {
@@ -353,53 +340,20 @@ const exchangeAuthCode = async (authCode: string) => {
 
 // Обновляем функцию signIn
 export const signIn = async (): Promise<void> => {
-  if (!window.tokenClient) {
-    throw new Error('Token client not initialized');
+  try {
+    const auth2 = window.gapi.auth2.getAuthInstance();
+    const user = await auth2.signIn();
+    const authResponse = user.getAuthResponse(true);
+    
+    window.gapi.client.setToken({
+      access_token: authResponse.access_token
+    });
+
+    console.log('Successfully signed in');
+  } catch (error) {
+    console.error('Error signing in:', error);
+    throw error;
   }
-
-  return new Promise((resolve, reject) => {
-    try {
-      window.tokenClient.callback = async (response) => {
-        if (response.error) {
-          reject(response);
-          return;
-        }
-
-        try {
-          // Если получили authorization code
-          if (response.code) {
-            // Обмениваем код на токены
-            const tokens = await exchangeAuthCode(response.code);
-            console.log('Successfully exchanged auth code for tokens');
-          }
-
-          // Проверяем авторизацию
-          const testResponse = await gapi.client.youtube.channels.list({
-            part: ['snippet'],
-            mine: true
-          });
-
-          if (testResponse.status === 200) {
-            console.log('Successfully authenticated with YouTube');
-            resolve();
-          } else {
-            reject(new Error('Failed to authenticate with YouTube'));
-          }
-        } catch (error) {
-          console.error('Error during authentication:', error);
-          reject(error);
-        }
-      };
-
-      // Запрашиваем и code, и token
-      window.tokenClient.requestAccessToken({
-        prompt: 'consent',
-        response_type: 'code token'
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
 };
 
 // Функция выхода
