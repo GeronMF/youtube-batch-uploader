@@ -272,3 +272,28 @@ export const addComment = async (videoId: string, commentText: string): Promise<
     }
   });
 };
+
+// Функция входа
+export const signIn = async (): Promise<void> => {
+  if (!window.tokenClient) {
+    throw new Error('Token client not initialized');
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      window.tokenClient.callback = (response) => {
+        if (response.error) {
+          reject(response);
+          return;
+        }
+        resolve();
+      };
+
+      window.tokenClient.requestAccessToken({
+        prompt: 'consent'
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
