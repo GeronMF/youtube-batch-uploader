@@ -38,6 +38,15 @@ jobs:
           echo "VITE_GOOGLE_REFRESH_TOKEN=${{ secrets.VITE_GOOGLE_REFRESH_TOKEN }}" >> .env
           echo "VITE_GOOGLE_ACCESS_TOKEN=${{ secrets.VITE_GOOGLE_ACCESS_TOKEN }}" >> .env
           
+      - name: Debug Environment
+        run: |
+          echo "Checking environment variables..."
+          echo "VITE_GOOGLE_CLIENT_ID exists: ${{ secrets.VITE_GOOGLE_CLIENT_ID != '' }}"
+          echo "VITE_YOUTUBE_API_KEY exists: ${{ secrets.VITE_YOUTUBE_API_KEY != '' }}"
+          echo "VITE_GOOGLE_CLIENT_SECRET exists: ${{ secrets.VITE_GOOGLE_CLIENT_SECRET != '' }}"
+          echo "VITE_GOOGLE_REFRESH_TOKEN exists: ${{ secrets.VITE_GOOGLE_REFRESH_TOKEN != '' }}"
+          echo "VITE_GOOGLE_ACCESS_TOKEN exists: ${{ secrets.VITE_GOOGLE_ACCESS_TOKEN != '' }}"
+          
       - name: Deploy to Server
         uses: appleboy/scp-action@v0.1.7
         with:
