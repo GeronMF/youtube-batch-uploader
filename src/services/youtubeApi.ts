@@ -73,12 +73,7 @@ export const initGoogleApi = async (): Promise<void> => {
     await Promise.all([waitForGAPI(), waitForGIS()]);
     console.log('GAPI and GIS loaded successfully');
 
-    // Устанавливаем начальный токен
-    window.gapi.client.setToken({
-      access_token: INITIAL_ACCESS_TOKEN
-    });
-
-    // Инициализируем GAPI клиент
+    // СНАЧАЛА инициализируем GAPI клиент
     await window.gapi.client.init({
       apiKey: API_KEY,
       discoveryDocs: [
@@ -87,7 +82,14 @@ export const initGoogleApi = async (): Promise<void> => {
       ]
     });
 
-    // Инициализируем Google Identity Services
+    // ПОТОМ устанавливаем начальный токен
+    if (INITIAL_ACCESS_TOKEN) {
+      window.gapi.client.setToken({
+        access_token: INITIAL_ACCESS_TOKEN
+      });
+    }
+
+    // В КОНЦЕ инициализируем Google Identity Services
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES.join(' '),
@@ -95,8 +97,6 @@ export const initGoogleApi = async (): Promise<void> => {
         if (response.error) {
           throw response;
         }
-        
-        // Обновляем токен
         window.gapi.client.setToken({
           access_token: response.access_token
         });
@@ -104,7 +104,6 @@ export const initGoogleApi = async (): Promise<void> => {
     });
 
     window.tokenClient = tokenClient;
-    
     console.log('Google API initialized successfully');
     
   } catch (error) {
