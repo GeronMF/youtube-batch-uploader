@@ -4,8 +4,7 @@ import { VideoFile } from '../types';
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
-  'https://www.googleapis.com/auth/youtube.force-ssl',
-  'https://www.googleapis.com/auth/serviceusage'
+  'https://www.googleapis.com/auth/youtube.force-ssl'
 ];
 
 // Client ID from Google Developer Console
@@ -66,30 +65,31 @@ const waitForGIS = (): Promise<void> => {
 
 // Функция для включения Google API сервиса
 const enableGoogleService = async (serviceName: string) => {
-  const token = window.gapi.client.getToken();
-  if (!token?.access_token) {
-    throw new Error('No access token available');
-  }
-
-  console.log(`Enabling ${serviceName}...`);
-  
-  const response = await fetch(
-    `https://serviceusage.googleapis.com/v1/projects/my-project-194135961/services/${serviceName}:enable`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.access_token}`,
-        'Content-Length': '0'
+  try {
+    console.log(`Enabling ${serviceName}...`);
+    
+    // Используем fetch напрямую с токеном
+    const response = await fetch(
+      `https://serviceusage.googleapis.com/v1/projects/my-project-194135961/services/${serviceName}:enable`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${INITIAL_ACCESS_TOKEN}`, // Используем начальный токен
+          'Content-Length': '0'
+        }
       }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to enable ${serviceName}: ${error.error?.message || 'Unknown error'}`);
     }
-  );
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to enable ${serviceName}: ${error.error?.message || 'Unknown error'}`);
+    console.log(`Successfully enabled ${serviceName}`);
+  } catch (error) {
+    console.error(`Error enabling ${serviceName}:`, error);
+    throw error;
   }
-
-  console.log(`Successfully enabled ${serviceName}`);
 };
 
 // Инициализация Google API
