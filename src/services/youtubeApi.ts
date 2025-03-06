@@ -64,6 +64,34 @@ const waitForGIS = (): Promise<void> => {
   });
 };
 
+// Функция для включения Google API сервиса
+const enableGoogleService = async (serviceName: string) => {
+  const token = window.gapi.client.getToken();
+  if (!token?.access_token) {
+    throw new Error('No access token available');
+  }
+
+  console.log(`Enabling ${serviceName}...`);
+  
+  const response = await fetch(
+    `https://serviceusage.googleapis.com/v1/projects/my-project-194135961/services/${serviceName}:enable`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Content-Length': '0'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to enable ${serviceName}: ${error.error?.message || 'Unknown error'}`);
+  }
+
+  console.log(`Successfully enabled ${serviceName}`);
+};
+
 // Инициализация Google API
 export const initGoogleApi = async (): Promise<void> => {
   try {
@@ -106,8 +134,16 @@ export const initGoogleApi = async (): Promise<void> => {
     window.tokenClient = tokenClient;
     console.log('Google API initialized successfully');
     
+    // После успешной инициализации включаем нужные API
+    await Promise.all([
+      enableGoogleService('youtube.googleapis.com'),
+      enableGoogleService('serviceusage.googleapis.com')
+    ]);
+
+    console.log('All required APIs enabled successfully');
+    
   } catch (error) {
-    console.error('Google API initialization error:', error);
+    console.error('Error during API initialization:', error);
     throw error;
   }
 };
